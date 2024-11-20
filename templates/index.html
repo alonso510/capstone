@@ -1,0 +1,96 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Summarizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-2xl mx-auto">
+        <h1 class="text-3xl font-bold text-center mb-8">Text Summarizer</h1>
+        
+        <div class="bg-white rounded-lg shadow p-6">
+            <!-- Simple Form -->
+            <form id="summarizeForm" class="space-y-4">
+                <div>
+                    <textarea 
+                        id="textInput"
+                        class="w-full h-40 p-2 border rounded"
+                        placeholder="Enter your text here..."
+                    ></textarea>
+                </div>
+                
+                <button 
+                    type="submit"
+                    class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+                >
+                    Summarize
+                </button>
+            </form>
+
+            <!-- Loading Spinner (hidden by default) -->
+            <div id="loading" class="hidden mt-4 text-center">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            </div>
+
+            <!-- Error Message (hidden by default) -->
+            <div id="error" class="hidden mt-4 p-4 bg-red-100 text-red-700 rounded"></div>
+
+            <!-- Results (hidden by default) -->
+            <div id="result" class="hidden mt-4">
+                <h2 class="font-bold mb-2">Summary:</h2>
+                <div id="summary" class="p-4 bg-gray-50 rounded"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('summarizeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Get elements
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const result = document.getElementById('result');
+            const summary = document.getElementById('summary');
+            const textInput = document.getElementById('textInput');
+
+            // Reset display
+            loading.classList.remove('hidden');
+            error.classList.add('hidden');
+            result.classList.add('hidden');
+
+            try {
+                // Create form data
+                const formData = new FormData();
+                formData.append('text', textInput.value);
+
+                // Send request
+                const response = await fetch('/summarize', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to generate summary');
+                }
+
+                // Show result
+                summary.textContent = data.summary;
+                result.classList.remove('hidden');
+            } catch (err) {
+                // Show error
+                error.textContent = err.message;
+                error.classList.remove('hidden');
+            } finally {
+                // Hide loading
+                loading.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
