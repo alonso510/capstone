@@ -46,16 +46,30 @@ def analyze_text(text):
     words = text.split()
     sentences = text.split('.')
     
+    # Improved keyword extraction configuration
+    kw_extractor = yake.KeywordExtractor(
+        lan="en", 
+        n=2,                      # Extract 2-word phrases
+        dedupLim=0.3,            # Higher threshold for deduplication
+        dedupFunc='seqm',        # Sequence matcher for deduplication
+        windowsSize=2,           # Context window size
+        top=5,                   # Number of keywords to extract
+        features=None
+    )
+    
+    # Extract keywords with custom parameters
+    keywords = kw_extractor.extract_keywords(text)
+    key_topics = [kw[0] for kw in sorted(keywords, key=lambda x: x[1])[:5]]
+
     stats = {
         'sentiment': round(blob.sentiment.polarity, 2),
         'subjectivity': round(blob.sentiment.subjectivity, 2),
         'word_count': len(words),
         'sentence_count': len(sentences),
         'avg_words_per_sentence': round(len(words) / len(sentences), 1),
-        'key_topics': [kw[0] for kw in keyword_extractor.extract_keywords(text)[:5]]
+        'key_topics': key_topics
     }
     return stats
-
 def extract_text_from_pdf(file):
     try:
         pdf_reader = PyPDF2.PdfReader(file)
