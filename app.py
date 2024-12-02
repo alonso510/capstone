@@ -3,12 +3,58 @@ from werkzeug.utils import secure_filename
 import os
 import PyPDF2
 from transformers import pipeline
+from functools import lru_cache
+from concurrent.futures import ThreadPoolExecutor
+import torch
+import gc
+from textblob import TextBlob
+import yake
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 summarizer = pipeline("summarization", model="facebook/bart-large-cnn", device=-1)
+keyword_extractor = yake.KeywordExtractor()
+
+@lru_cache(maxsize=100)
+def cached_summarize(text, max_length=130, min_length=30):
+    return summarizer(text, max_length=max_length, min_length=min_length, do_sample=False)[0]['summary_text']
+
+def process_chunks(text, chunk_size=1000):
+    chunks = [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
+    with ThreadPoolExecutor() as executor:
+        summaries = list(executor.map(cached_summarize, chunks))
+    return " ".join(summaries)
+
+def safe_summarize(text, length='medium'):
+    lengths = {
+        'short': {'max_length': 75, 'min_length': 30},
+        'medium': {'max_length': 150, 'min_length': 50},
+        'long': {'max_length': 300, 'min_length': 100}
+    }
+    
+    try:
+        if len(text) > 1000:
+            return process_chunks(text)
+        return cached_summarize(text, **lengths[length])
+    except Exception:
+        return process_chunks(text, chunk_size=500)
+
+def analyze_text(text):
+    blob = TextBlob(text)
+    words = text.split()
+    sentences = text.split('.')
+    
+    stats = {
+        'sentiment': round(blob.sentiment.polarity, 2),
+        'subjectivity': round(blob.sentiment.subjectivity, 2),
+        'word_count': len(words),
+        'sentence_count': len(sentences),
+        'avg_words_per_sentence': round(len(words) / len(sentences), 1),
+        'key_topics': [kw[0] for kw in keyword_extractor.extract_keywords(text)[:5]]
+    }
+    return stats
 
 def extract_text_from_pdf(file):
     try:
@@ -24,6 +70,10 @@ def index():
 @app.route('/summarize', methods=['POST'])
 def summarize():
     try:
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            gc.collect()
+
         if 'file' in request.files:
             file = request.files['file']
             if not file.filename.endswith('.pdf'):
@@ -35,14 +85,17 @@ def summarize():
         if len(text.split()) < 30:
             return jsonify({'error': 'Text too short to summarize'}), 400
 
-        max_length = min(130, len(text.split()) // 2)
-        min_length = min(30, max_length - 10)
-        
-        summary = summarizer(text, max_length=max_length, min_length=min_length, do_sample=False)
-        return jsonify({'summary': summary[0]['summary_text']})
+        length = request.form.get('length', 'medium')
+        summary = safe_summarize(text, length)
+        stats = analyze_text(text)
+
+        return jsonify({
+            'summary': summary,
+            'stats': stats
+        })
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(threaded=True)
