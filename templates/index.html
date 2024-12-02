@@ -59,11 +59,7 @@
                 </div>
 
                 <!-- Summary Length Selection -->
-                <div class="mb-4">
-                    <select id="summaryLength" class="w-full p-3 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                        <option value="medium" selected>Summarize</option>
-                    </select>
-                </div>
+             
 
                 <button id="summarizeBtn" class="w-full bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700 transition-colors duration-200">
                     Summarize
@@ -186,55 +182,55 @@
 
        // Replace the Form Submission section in your script with this:
 
-document.getElementById('summarizeBtn').addEventListener('click', async () => {
-    const loading = document.getElementById('loading');
-    const error = document.getElementById('error');
-    const result = document.getElementById('result');
+       document.getElementById('summarizeBtn').addEventListener('click', async () => {
+        const loading = document.getElementById('loading');
+        const error = document.getElementById('error');
+        const result = document.getElementById('result');
+        
+        loading.classList.remove('hidden');
+        error.classList.add('hidden');
+        result.classList.add('hidden');
     
-    loading.classList.remove('hidden');
-    error.classList.add('hidden');
-    result.classList.add('hidden');
-
-    try {
-        const formData = new FormData();
-        formData.append('length', document.getElementById('summaryLength').value); // Add this line
-
-        if (document.getElementById('inputType').value === 'pdf') {
-            const pdfFile = document.getElementById('pdf').files[0];
-            if (!pdfFile) throw new Error('Please select a PDF file');
-            formData.append('file', pdfFile);
-        } else {
-            const text = document.getElementById('text').value.trim();
-            if (!text) throw new Error('Please enter some text');
-            formData.append('text', text);
+        try {
+            const formData = new FormData();
+            formData.append('length', 'medium'); // Keep this line with default value
+    
+            if (document.getElementById('inputType').value === 'pdf') {
+                const pdfFile = document.getElementById('pdf').files[0];
+                if (!pdfFile) throw new Error('Please select a PDF file');
+                formData.append('file', pdfFile);
+            } else {
+                const text = document.getElementById('text').value.trim();
+                if (!text) throw new Error('Please enter some text');
+                formData.append('text', text);
+            }
+    
+            const response = await fetch('/summarize', {
+                method: 'POST',
+                body: formData
+            });
+    
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Failed to generate summary');
+    
+            document.getElementById('summary').textContent = data.summary;
+            document.getElementById('wordCount').textContent = data.stats.word_count;
+            document.getElementById('sentiment').textContent = 
+                `${data.stats.sentiment > 0 ? 'Positive' : data.stats.sentiment < 0 ? 'Negative' : 'Neutral'} (${data.stats.sentiment})`;
+    
+            const topicsContainer = document.getElementById('keyTopics');
+            topicsContainer.innerHTML = data.stats.key_topics
+                .map(topic => `<span class="px-2 py-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded">${topic}</span>`)
+                .join('');
+    
+            result.classList.remove('hidden');
+        } catch (err) {
+            error.textContent = err.message;
+            error.classList.remove('hidden');
+        } finally {
+            loading.classList.add('hidden');
         }
-
-        const response = await fetch('/summarize', {
-            method: 'POST',
-            body: formData
-        });
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Failed to generate summary');
-
-        document.getElementById('summary').textContent = data.summary;
-        document.getElementById('wordCount').textContent = data.stats.word_count;
-        document.getElementById('sentiment').textContent = 
-            `${data.stats.sentiment > 0 ? 'Positive' : data.stats.sentiment < 0 ? 'Negative' : 'Neutral'} (${data.stats.sentiment})`;
-
-        const topicsContainer = document.getElementById('keyTopics');
-        topicsContainer.innerHTML = data.stats.key_topics
-            .map(topic => `<span class="px-2 py-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded">${topic}</span>`)
-            .join('');
-
-        result.classList.remove('hidden');
-    } catch (err) {
-        error.textContent = err.message;
-        error.classList.remove('hidden');
-    } finally {
-        loading.classList.add('hidden');
-    }
-});
+    });
                // Enhanced drag and drop handling
                const dropZone = document.getElementById('dropZone');
                const fileInput = document.getElementById('pdf');
