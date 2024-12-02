@@ -1,73 +1,168 @@
-<!-- templates/index.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Summarizer</title>
+    <title>AI Text Summarizer</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); }
+        .card-hover { transition: transform 0.2s; }
+        .card-hover:hover { transform: translateY(-2px); }
+    </style>
 </head>
-<body class="bg-gray-100 p-8">
-    <div class="max-w-2xl mx-auto">
-        <h1 class="text-3xl font-bold text-center mb-8">Text Summarizer</h1>
-        
-        <div class="bg-white rounded-lg shadow p-6">
-            <!-- Simple Form -->
-            <form id="summarizeForm" class="space-y-4">
-                <div>
-                    <textarea 
-                        id="textInput"
-                        class="w-full h-40 p-2 border rounded"
-                        placeholder="Enter your text here..."
-                    ></textarea>
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+    <div class="min-h-screen">
+        <!-- Header with Theme Toggle -->
+        <nav class="gradient-bg p-4">
+            <div class="max-w-7xl mx-auto flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-white">AI Summarizer</h1>
+                <button id="themeToggle" class="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                    </svg>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="max-w-4xl mx-auto px-4 py-8">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8 card-hover">
+                <div class="mb-6">
+                    <select id="inputType" class="w-full p-3 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <option value="text">Enter Text</option>
+                        <option value="pdf">Upload PDF</option>
+                    </select>
                 </div>
-                
-                <button 
-                    type="submit"
-                    class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-                >
+
+                <div id="textInput" class="mb-6">
+                    <textarea id="text" rows="6" 
+                        class="w-full p-4 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-none"
+                        placeholder="Enter your text here..."></textarea>
+                </div>
+
+                <div id="pdfInput" class="mb-6 hidden">
+                    <div id="dropZone" class="border-2 border-dashed rounded-lg p-6 text-center">
+                        <input type="file" id="pdf" accept=".pdf" class="hidden" onchange="handleFileSelect(this)">
+                        <label for="pdf" class="cursor-pointer block">
+                            <div class="text-gray-500 dark:text-gray-400">
+                                <svg class="mx-auto h-12 w-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                </svg>
+                                <p id="fileStatus" class="text-sm">Drop your PDF here or click to upload</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <button id="summarizeBtn" class="w-full bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700 
+                    transition-colors duration-200">
                     Summarize
                 </button>
-            </form>
-
-            <!-- Loading Spinner (hidden by default) -->
-            <div id="loading" class="hidden mt-4 text-center">
-                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
             </div>
 
-            <!-- Error Message (hidden by default) -->
-            <div id="error" class="hidden mt-4 p-4 bg-red-100 text-red-700 rounded"></div>
+            <!-- Results Section -->
+            <div id="result" class="hidden">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 card-hover">
+                    <h2 class="text-xl font-semibold mb-4 dark:text-white">Summary</h2>
+                    <div id="summary" class="prose dark:prose-invert mb-6"></div>
+                    
+                    <!-- Export Options -->
+                    <div class="flex gap-3">
+                        <button onclick="exportAs('pdf')" class="flex-1 bg-gray-100 dark:bg-gray-700 p-2 rounded-lg 
+                            hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200 text-sm">
+                            Export as PDF
+                        </button>
+                        <button onclick="exportAs('docx')" class="flex-1 bg-gray-100 dark:bg-gray-700 p-2 rounded-lg 
+                            hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200 text-sm">
+                            Export as Word
+                        </button>
+                        <button onclick="exportAs('md')" class="flex-1 bg-gray-100 dark:bg-gray-700 p-2 rounded-lg 
+                            hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200 text-sm">
+                            Export as Markdown
+                        </button>
+                    </div>
+                </div>
+            </div>
 
-            <!-- Results (hidden by default) -->
-            <div id="result" class="hidden mt-4">
-                <h2 class="font-bold mb-2">Summary:</h2>
-                <div id="summary" class="p-4 bg-gray-50 rounded"></div>
+            <!-- Loading Spinner -->
+            <div id="loading" class="hidden">
+                <div class="flex justify-center items-center p-8">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                </div>
+            </div>
+
+            <!-- Error Message -->
+            <div id="error" class="hidden">
+                <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg"></div>
             </div>
         </div>
     </div>
 
     <script>
-        document.getElementById('summarizeForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            // Get elements
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+        });
+
+        // Input Type Toggle
+        const inputType = document.getElementById('inputType');
+        const textInput = document.getElementById('textInput');
+        const pdfInput = document.getElementById('pdfInput');
+
+        inputType.addEventListener('change', () => {
+            if (inputType.value === 'pdf') {
+                textInput.classList.add('hidden');
+                pdfInput.classList.remove('hidden');
+            } else {
+                textInput.classList.remove('hidden');
+                pdfInput.classList.add('hidden');
+            }
+        });
+
+        // Export Functions
+        function exportAs(format) {
+            const summary = document.getElementById('summary').innerText;
+            const blob = new Blob([summary], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `summary.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
+
+        // Form Submission
+        document.getElementById('summarizeBtn').addEventListener('click', async () => {
             const loading = document.getElementById('loading');
             const error = document.getElementById('error');
             const result = document.getElementById('result');
             const summary = document.getElementById('summary');
-            const textInput = document.getElementById('textInput');
 
-            // Reset display
             loading.classList.remove('hidden');
             error.classList.add('hidden');
             result.classList.add('hidden');
 
             try {
-                // Create form data
                 const formData = new FormData();
-                formData.append('text', textInput.value);
+                
+                if (inputType.value === 'pdf') {
+                    const pdfFile = document.getElementById('pdf').files[0];
+                    if (!pdfFile) throw new Error('Please select a PDF file');
+                    formData.append('file', pdfFile);
+                } else {
+                    const text = document.getElementById('text').value.trim();
+                    if (!text) throw new Error('Please enter some text');
+                    formData.append('text', text);
+                }
 
-                // Send request
                 const response = await fetch('/summarize', {
                     method: 'POST',
                     body: formData
@@ -75,20 +170,48 @@
 
                 const data = await response.json();
 
-                if (!response.ok) {
-                    throw new Error(data.error || 'Failed to generate summary');
-                }
+                if (!response.ok) throw new Error(data.error || 'Failed to generate summary');
 
-                // Show result
                 summary.textContent = data.summary;
                 result.classList.remove('hidden');
             } catch (err) {
-                // Show error
                 error.textContent = err.message;
                 error.classList.remove('hidden');
             } finally {
-                // Hide loading
                 loading.classList.add('hidden');
+            }
+        });
+        const dropZone = document.getElementById('dropZone');
+        const fileStatus = document.getElementById('fileStatus');
+    
+        function handleFileSelect(input) {
+            const file = input.files[0];
+            if (file) {
+                fileStatus.textContent = `Selected: ${file.name}`;
+            }
+        }
+    
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-indigo-500');
+        });
+    
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-indigo-500');
+        });
+    
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-indigo-500');
+            
+            const file = e.dataTransfer.files[0];
+            if (file && file.type === 'application/pdf') {
+                const input = document.getElementById('pdf');
+                input.files = e.dataTransfer.files;
+                fileStatus.textContent = `Selected: ${file.name}`;
+            } else {
+                fileStatus.textContent = 'Please upload a PDF file';
             }
         });
     </script>

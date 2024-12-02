@@ -1,17 +1,21 @@
-# app.py
 from flask import Flask, render_template, request, jsonify
-from transformers import pipeline
+from werkzeug.utils import secure_filename
 import os
+import PyPDF2
+from transformers import pipeline
 
 app = Flask(__name__)
-app.debug = True
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
-# Initialize the summarizer
-summarizer = pipeline(
-    "summarization",
-    model="facebook/bart-large-cnn",
-    device=-1  # Force CPU usage
-)
+summarizer = pipeline("summarization", model="facebook/bart-large-cnn", device=-1)
+
+def extract_text_from_pdf(file):
+    try:
+        pdf_reader = PyPDF2.PdfReader(file)
+        return " ".join(page.extract_text() for page in pdf_reader.pages)
+    except Exception as e:
+        raise Exception(f"Error reading PDF: {str(e)}")
 
 @app.route('/')
 def index():
@@ -20,19 +24,24 @@ def index():
 @app.route('/summarize', methods=['POST'])
 def summarize():
     try:
-        text = request.form.get('text', '')
-        
-        if not text.strip():
-            return jsonify({'error': 'No text provided'}), 400
+        if 'file' in request.files:
+            file = request.files['file']
+            if not file.filename.endswith('.pdf'):
+                return jsonify({'error': 'Please upload a PDF file'}), 400
+            text = extract_text_from_pdf(file)
+        else:
+            text = request.form.get('text', '')
 
-        # Generate summary
-        result = summarizer(text, max_length=130, min_length=30, do_sample=False)
-        summary = result[0]['summary_text']
+        if len(text.split()) < 30:
+            return jsonify({'error': 'Text too short to summarize'}), 400
+
+        max_length = min(130, len(text.split()) // 2)
+        min_length = min(30, max_length - 10)
         
-        return jsonify({'summary': summary})
+        summary = summarizer(text, max_length=max_length, min_length=min_length, do_sample=False)
+        return jsonify({'summary': summary[0]['summary_text']})
 
     except Exception as e:
-        print(f"Error: {str(e)}")  # This will show in your terminal
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
