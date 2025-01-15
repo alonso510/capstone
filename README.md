@@ -144,7 +144,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 Alonso Nunez - [Email](mailto:your.email@example.com)
 
-Project Link: [](https://github.com/alonso510/capstone)
+Project Link: [Click Here](https://github.com/alonso510/capstone)
 
 ## 🙏 Acknowledgments
 
