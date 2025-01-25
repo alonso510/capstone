@@ -142,7 +142,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## 👤 Contact
 
-Alonso Nunez - [Email](alonso510@proton.me)
+Alonso Nunez - alonso510@proton.me
 
 Project Link: [Click Here](https://github.com/alonso510/capstone)
 
